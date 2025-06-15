@@ -26,27 +26,34 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         }
 
         if opcode == 0x60 {
+            // PUSH1
             let push1_data = code[pc + 1];
 
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
 
-            let mut arr: [u64; 4] = [127, 121, 121, 121];
-
-            // arr[3] = push1_data as u64;
-
-            // println!(
-            //     "------------------- \n code in hex: 0x{:02}\n-------------------",
-            //     push1_data
-            // );
+            arr[0] = push1_data as u64;
 
             stack.push(U256(arr));
-            stack.push(U256(arr));
-
-            println!(
-                "------------------- \n code in hex: {}\n-------------------",
-                code.encode_hex::<String>()
-            );
         }
 
+        if opcode == 0x61 {
+            // PUSH2
+
+            let mut push2_data = (code[pc + 1] as u16) << 8;
+            let mut push2_data2 = code[pc + 2];
+            push2_data += push2_data2 as u16;
+
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
+
+            arr[0] = push2_data as u64;
+
+            stack.push(U256(arr));
+        }
+
+
+
+
+        
         // program counter updates at the end of the all if statements
         pc += 1;
     }

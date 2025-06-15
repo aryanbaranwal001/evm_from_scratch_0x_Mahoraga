@@ -40,7 +40,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             // PUSH2
 
             let mut push2_data = (code[pc + 1] as u16) << 8;
-            let mut push2_data2 = code[pc + 2];
+            let push2_data2 = code[pc + 2];
             push2_data += push2_data2 as u16;
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
@@ -50,10 +50,25 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.push(U256(arr));
         }
 
+        if opcode == 0x63 {
+            // PUSH2
 
+            let mut push2_data = (code[pc + 1] as u32) << 24;
+            let push2_data2 = (code[pc + 2] as u32) << 16;
+            let push2_data3 = (code[pc + 3] as u32) << 8;
+            let push2_data4 = code[pc + 4] as u32;
 
+            push2_data += push2_data2 as u32;
+            push2_data += push2_data3 as u32;
+            push2_data += push2_data4 as u32;
 
-        
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
+
+            arr[0] = push2_data as u64;
+
+            stack.push(U256(arr));
+        }
+
         // program counter updates at the end of the all if statements
         pc += 1;
     }

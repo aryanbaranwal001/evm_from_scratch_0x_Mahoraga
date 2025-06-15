@@ -1,7 +1,6 @@
 use primitive_types::U256;
 use hex::ToHex;
 
-
 pub struct EvmResult {
     pub stack: Vec<U256>,
     pub success: bool,
@@ -15,7 +14,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
     while pc < code.len() {
         let opcode = code[pc];
-        pc += 1;
 
         if opcode == 0x00 {
             // STOP
@@ -28,35 +26,29 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         }
 
         if opcode == 0x60 {
-            println!("Code in hex: {}", code.encode_hex::<String>());
-            
+            let push1_data = code[pc + 1];
+
+
+            let mut arr: [u64; 4] = [127, 121, 121, 121];
+
+            // arr[3] = push1_data as u64;
+
+            // println!(
+            //     "------------------- \n code in hex: 0x{:02}\n-------------------",
+            //     push1_data
+            // );
+
+            stack.push(U256(arr));
+            stack.push(U256(arr));
+
+            println!(
+                "------------------- \n code in hex: {}\n-------------------",
+                code.encode_hex::<String>()
+            );
         }
 
-
-
-
-
-
-        // if opcode == 0x60 {
-        //     // PUSH0
-        //     stack.push(U256([0, 0, 0, 0]));
-        // }
-        // if opcode == 0x5f {
-        //     // PUSH0
-        //     stack.push(U256([0, 0, 0, 0]));
-        // }
-        // if opcode == 0x5f {
-        //     // PUSH0
-        //     stack.push(U256([0, 0, 0, 0]));
-        // }
-        // if opcode == 0x5f {
-        //     // PUSH0
-        //     stack.push(U256([0, 0, 0, 0]));
-        // }
-        // if opcode == 0x5f {
-        //     // PUSH0
-        //     stack.push(U256([0, 0, 0, 0]));
-        // }
+        // program counter updates at the end of the all if statements
+        pc += 1;
     }
 
     return EvmResult {

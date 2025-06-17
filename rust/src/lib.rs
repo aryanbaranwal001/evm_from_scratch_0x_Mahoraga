@@ -15,11 +15,63 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     while pc < code.len() {
         let opcode = code[pc];
 
+        if opcode == 0x03 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
 
+            let first_arr = first.0;
+            let second_arr = second.0;
 
+            // first - second
 
+            let mut result_arr = [0u128; 4];
+
+            for i in 0..4 {
+                let mod_first_element_arry = (first_arr[i] as u128) + (0x01 << 64);
+                result_arr[i] = mod_first_element_arry - (second_arr[i] as u128);
+
+                // println!("mod_first_element_arry {:02x?}", mod_first_element_arry);
+                // println!("seoncd_arr {:02x?}", (second_arr[i] as u128));
+                // println!("result_arr {:02x?}", result_arr[i]);
+            }
+
+            // println!("{:02x?}", result_arr);
+
+            let mut borrow: u128 = 0;
+
+            let mut final_result_arr = [0u128; 4];
+
+            for i in 0..4 {
+                final_result_arr[i] = result_arr[i] - borrow;
+
+                // println!("resularry{i} {:02x?}", result_arr[i]);
+
+                // println!("final_result_arr {:02x?}", final_result_arr[i]);
+                // println!("-------------------------");
+                // println!("final_result_arr {:02x?}", ((result_arr[i]) - (borrow as u128)) as u128);
+
+                borrow = final_result_arr[i] >> 64;
+
+                // println!("borrow {:02x?}", borrow);
+
+                if borrow == 0 {
+                    borrow = 1;
+                } else if borrow == 1 {
+                    borrow = 0;
+                }
+            }
+
+            let mut finalf_result_arr = [0u64; 4];
+
+            for k in 0..4 {
+                finalf_result_arr[k] = final_result_arr[k] as u64;
+            }
+
+            stack.insert(0, U256(finalf_result_arr));
+        }
 
         if opcode == 0x02 {
+            // Mul overflow
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -39,11 +91,11 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             }
             // println!("{:02x?}", temp_result);
 
-            let mut carry: u64 = 0;
+            let mut borrow: u64 = 0;
             for i in 0..7 {
-                temp_result[i] = temp_result[i] + (carry as u128);
-                carry = (temp_result[i] >> 64) as u64;
-                // println!("carry {:02x?}", carry);
+                temp_result[i] = temp_result[i] + (borrow as u128);
+                borrow = (temp_result[i] >> 64) as u64;
+                // println!("borrow {:02x?}", borrow);
             }
             // println!("{:02x?}", temp_result);
 
@@ -64,13 +116,13 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let second_arr = second.0;
 
             let mut result_arr = [0u64; 4];
-            let mut carry = 0u64;
+            let mut borrow = 0u64;
 
             for i in 0..4 {
-                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (carry as u128);
+                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (borrow as u128);
 
                 result_arr[i] = sum as u64;
-                carry = (sum >> 64) as u64;
+                borrow = (sum >> 64) as u64;
             }
 
             let sum = U256(result_arr);

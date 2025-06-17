@@ -15,22 +15,62 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     while pc < code.len() {
         let opcode = code[pc];
 
-        if opcode == 0x01 {
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
+        if opcode == 0x02 {
+            let second = stack.remove(0);
+            let first = stack.remove(0);
 
+            let first_arr = first.0;
+            let second_arr = second.0;
+
+            println!("{:02x?}", first_arr);
+            println!("{:02x?}", second_arr);
+            
+            
+            let mut temp_result = [0u128; 7];
+            
+            for i in 0..4 {
+                for j in 0..4 {
+                    let product = (first_arr[i] as u128) * (second_arr[j] as u128);
+                    temp_result[i + j] += product;
+                }
+            }
+            println!("{:02x?}", temp_result);
+            
+            let mut carry: u64 = 0;
+            for i in 0..7 {
+                temp_result[i] = temp_result[i] + carry as u128;
+                carry = (temp_result[i] >> 64) as u64; 
+                println!("carry {:02x?}", carry);
+            }
+            println!("{:02x?}", temp_result);
+            
+            let mut result_arr = [0u64; 4];
+            for i in 0..4 {
+                result_arr[i] = temp_result[i] as u64;
+            }
+
+            let result_num = U256(result_arr);
+            stack.insert(0, result_num);
+        }
+
+        if opcode == 0x01 {
             let first = stack.remove(0);
             let second = stack.remove(0);
 
-            // @q how the hell is first + second getting added up if its an array struct of
-            // u64; 4 ??
-            // let sum = first + second;
+            let first_arr = first.0;
+            let second_arr = second.0;
 
-            let sum = (first + second) % U256::MAX;
+            let mut result_arr = [0u64; 4];
+            let mut carry = 0u64;
 
-            println!("first 0x{:02X}", first);
-            println!("second 0x{:02X}", second);
-            println!("second 0x{:02X}", U256::MAX);
-            // println!("sum 0x{:02X}", sum);
+            for i in 0..4 {
+                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (carry as u128);
+
+                result_arr[i] = sum as u64; 
+                carry = (sum >> 64) as u64; 
+            }
+
+            let sum = U256(result_arr);
 
             stack.insert(0, sum);
         }

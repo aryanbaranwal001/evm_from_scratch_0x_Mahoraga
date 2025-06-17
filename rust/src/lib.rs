@@ -15,7 +15,111 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     while pc < code.len() {
         let opcode = code[pc];
 
+        // ----------------------------------------------------------------------//
+
+        if opcode == 0x09 {
+            // MULMOD or MULLMOD(wrapped)
+            
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+            let third = stack.remove(0);
+            
+            // first * second
+
+            let first_arr = first.0;
+            let second_arr = second.0;
+
+            let mut temp_result = [0u128; 7];
+
+            for i in 0..4 {
+                for j in 0..4 {
+                    let product = (first_arr[i] as u128) * (second_arr[j] as u128);
+                    temp_result[i + j] += product;
+                }
+            }
+
+            let mut borrow: u64 = 0;
+            for i in 0..7 {
+                temp_result[i] = temp_result[i] + (borrow as u128);
+                borrow = (temp_result[i] >> 64) as u64;
+                // println!("borrow {:02x?}", borrow);
+            }
+            // println!("{:02x?}", temp_result);
+
+            let mut result_arr = [0u64; 4];
+            for i in 0..4 {
+                result_arr[i] = temp_result[i] as u64;
+            }
+
+            let result_num = U256(result_arr);
+
+            let mut mulmod_num = result_num % third;
+
+            stack.insert(0, mulmod_num);
+        }
+
+        if opcode == 0x08 {
+            // ADDMOD or ADDMOD(wrapped)
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+            let third = stack.remove(0);
+
+            let first_arr = first.0;
+            let second_arr = second.0;
+
+            let mut result_arr = [0u64; 4];
+            let mut carry = 0u64;
+
+            for i in 0..4 {
+                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (carry as u128);
+
+                result_arr[i] = sum as u64;
+                carry = (sum >> 64) as u64;
+            }
+
+            let sum = U256(result_arr);
+
+            let mod_value = sum % third;
+            stack.insert(0, mod_value);
+        }
+
+        if opcode == 0x06 {
+            // MOD
+
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            // first / second
+
+            // @i implement this in your own way
+
+            if second == U256::zero() {
+                stack.insert(0, U256::zero());
+            } else {
+                let mut div = first % second;
+
+                stack.insert(0, div);
+            }
+        }
+
+        if opcode == 0x04 {
+            // DIV
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            // @i implement this in your own way
+
+            if second == U256::zero() {
+                stack.insert(0, U256::zero());
+            } else {
+                let mut div = first / second;
+
+                stack.insert(0, div);
+            }
+        }
+
         if opcode == 0x03 {
+            // SUB or SUB (underflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -71,7 +175,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         }
 
         if opcode == 0x02 {
-            // Mul overflow
+            // MUL or MUL (overflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -109,6 +213,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         }
 
         if opcode == 0x01 {
+            // ADD or ADD (overflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -116,13 +221,13 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let second_arr = second.0;
 
             let mut result_arr = [0u64; 4];
-            let mut borrow = 0u64;
+            let mut carry = 0u64;
 
             for i in 0..4 {
-                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (borrow as u128);
+                let sum = (first_arr[i] as u128) + (second_arr[i] as u128) + (carry as u128);
 
                 result_arr[i] = sum as u64;
-                borrow = (sum >> 64) as u64;
+                carry = (sum >> 64) as u64;
             }
 
             let sum = U256(result_arr);
@@ -154,7 +259,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
                 }
             }
 
-            stack.push(U256(arr));
+            stack.insert(0, U256(arr));
         }
 
         if opcode == 0x6a {
@@ -184,7 +289,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
                 // println!("first 0x{:02X}", push_data);
             }
             arr[0] = push_data as u64;
-            stack.push(U256(arr));
+            stack.insert(0, U256(arr));
         }
 
         if opcode == 0x69 {
@@ -213,7 +318,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
                 // println!("first 0x{:02X}", push_data);
             }
             arr[0] = push_data as u64;
-            stack.push(U256(arr));
+            stack.insert(0, U256(arr));
         }
 
         if opcode == 0x65 {
@@ -261,7 +366,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
             arr[0] = push2_data as u64;
 
-            stack.push(U256(arr));
+            stack.insert(0, U256(arr));
         }
 
         if opcode == 0x60 {

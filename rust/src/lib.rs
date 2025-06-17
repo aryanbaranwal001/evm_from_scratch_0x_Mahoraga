@@ -15,11 +15,53 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     while pc < code.len() {
         let opcode = code[pc];
 
+        if opcode == 0x01 {
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
 
+            let first = stack.remove(0);
+            let second = stack.remove(0);
 
+            // @q how the hell is first + second getting added up if its an array struct of
+            // u64; 4 ??
+            // let sum = first + second;
 
+            let sum = (first + second) % U256::MAX;
 
-        
+            println!("first 0x{:02X}", first);
+            println!("second 0x{:02X}", second);
+            println!("second 0x{:02X}", U256::MAX);
+            // println!("sum 0x{:02X}", sum);
+
+            stack.insert(0, sum);
+        }
+
+        if opcode == 0x50 {
+            stack.remove(0);
+        }
+
+        if opcode == 0x7f {
+            // PUSH32
+
+            let size = opcode - 0x60 + 0x01;
+            // println!("size 0x{:02X}", size);
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
+
+            let mut push32_quater_data: u64 = 0;
+
+            for j in 0..size {
+                pc += 1;
+                push32_quater_data += (code[pc] as u64) << ((8 - ((j + 1) % 8)) * 8) % 64;
+
+                if (j + 1) % 8 == 0 {
+                    // println!("first 0x{:02X}", push32_quater_data);
+                    arr[(4 - (j + 1) / 8) as usize] = push32_quater_data as u64;
+                    push32_quater_data = 0;
+                }
+            }
+
+            stack.push(U256(arr));
+        }
+
         if opcode == 0x6a {
             // PUSH11
             // @i see the hint and try to do something with it
@@ -127,29 +169,29 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.push(U256(arr));
         }
 
+        if opcode == 0x60 {
+            // PUSH1
+            pc += 1;
+            let push1_data = code[pc];
+
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
+
+            arr[0] = push1_data as u64;
+            stack.insert(0, U256(arr));
+        }
+
         if opcode == 0x61 {
             // PUSH2
-
-            let mut push2_data = (code[pc + 1] as u16) << 8;
-            let push2_data2 = code[pc + 2];
+            pc += 1;
+            let mut push2_data = (code[pc] as u16) << 8;
+            pc += 1;
+            let push2_data2 = code[pc];
             push2_data += push2_data2 as u16;
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
 
             arr[0] = push2_data as u64;
-
-            stack.push(U256(arr));
-        }
-
-        if opcode == 0x60 {
-            // PUSH1
-            let push1_data = code[pc + 1];
-
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[0] = push1_data as u64;
-
-            stack.push(U256(arr));
+            stack.insert(0, U256(arr));
         }
 
         if opcode == 0x5f {

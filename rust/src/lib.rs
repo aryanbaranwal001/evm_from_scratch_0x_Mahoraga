@@ -17,45 +17,20 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
         // ----------------------------------------------------------------------//
 
+
+        
         if opcode == 0x09 {
             // MULMOD or MULLMOD(wrapped)
-            
+
             let first = stack.remove(0);
             let second = stack.remove(0);
             let third = stack.remove(0);
-            
-            // first * second
 
-            let first_arr = first.0;
-            let second_arr = second.0;
 
-            let mut temp_result = [0u128; 7];
+            // @i see exactly how the fuck is this mod thingy implemented
+            let result_arr = ((first % third) * (second % third)) % third ;
 
-            for i in 0..4 {
-                for j in 0..4 {
-                    let product = (first_arr[i] as u128) * (second_arr[j] as u128);
-                    temp_result[i + j] += product;
-                }
-            }
-
-            let mut borrow: u64 = 0;
-            for i in 0..7 {
-                temp_result[i] = temp_result[i] + (borrow as u128);
-                borrow = (temp_result[i] >> 64) as u64;
-                // println!("borrow {:02x?}", borrow);
-            }
-            // println!("{:02x?}", temp_result);
-
-            let mut result_arr = [0u64; 4];
-            for i in 0..4 {
-                result_arr[i] = temp_result[i] as u64;
-            }
-
-            let result_num = U256(result_arr);
-
-            let mut mulmod_num = result_num % third;
-
-            stack.insert(0, mulmod_num);
+            stack.insert(0, result_arr);
         }
 
         if opcode == 0x08 {

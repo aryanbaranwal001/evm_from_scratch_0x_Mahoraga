@@ -13,12 +13,44 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     let code = _code.as_ref();
 
     while pc < code.len() {
+        // check all the opcodes and update the pc accn
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
 
+        if opcode == 0x0b {
+            // @i try to do this with whole u64; 4
+            let push1_opcode_value = stack.remove(0).0[0];
+            let value = stack.remove(0).0[0];
 
-        
+            // @i assuming its always push1
+            if push1_opcode_value == 0x00 {
+                if (value & 0x80) != 0 {
+                    let extended = U256::MAX - U256::from(255 - value);
+                    stack.push(extended);
+                } else {
+                    stack.push(U256::from(value));
+                }
+            }
+        }
+
+        if opcode == 0x0a {
+            let base = stack.remove(0).0[0];
+            let exp = stack.remove(0).0[0];
+
+            // @i u are not using whole all of the numbers
+
+            let mut num = base;
+            for i in 0..exp - 1 {
+                num *= base;
+                println!("first 0x{:02X}", num);
+            }
+
+            // @i there is a flaw here
+
+            stack.insert(0, U256::from(num));
+        }
+
         if opcode == 0x09 {
             // MULMOD or MULLMOD(wrapped)
 
@@ -26,9 +58,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let second = stack.remove(0);
             let third = stack.remove(0);
 
-
             // @i see exactly how the fuck is this mod thingy implemented
-            let result_arr = ((first % third) * (second % third)) % third ;
+            let result_arr = ((first % third) * (second % third)) % third;
 
             stack.insert(0, result_arr);
         }

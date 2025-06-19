@@ -1,5 +1,5 @@
 use primitive_types::U256;
-// use hex::ToHex;
+use hex::ToHex;
 
 pub struct EvmResult {
     pub stack: Vec<U256>,
@@ -21,25 +21,14 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
 
         // SHL
-        // if opcode == 0x1b {
-        //     println!("-------------------");
+        if opcode == 0x1b {
+            let shift = stack.remove(0);
+            let value = stack.remove(0);
 
-        //     let shift = stack.remove(0);
-        //     let value = stack.remove(0);            
+            let result = if shift >= U256::from(256) { U256::zero() } else { value << shift };
 
-        //     println!("shift 0x{:02X}", shift);
-        //     println!("value 0x{:02X}", value);
-            
-        //     let result = if shift >= U256::from(256) {
-        //         U256::zero()
-        //     } else {
-        //         value << shift
-        //     };
-
-        //     println!("result 0x{:02X}", result);
-
-        //     stack.insert(0, result);
-        // }
+            stack.insert(0, result);
+        }
 
         // NOT
         if opcode == 0x19 {
@@ -571,7 +560,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             arr[0] = push2_data as u64;
 
             stack.insert(0, U256(arr));
-            pc += 4;
         }
 
         // PUSH1

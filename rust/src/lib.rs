@@ -501,84 +501,22 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.remove(0);
         }
 
-        // PUSH32
-        if opcode == 0x7f {
+        // PUSH9 --> PUSH32
+        if 0x68 <= opcode && opcode <= 0x7f {
             let size = opcode - 0x60 + 0x01;
-            // println!("size 0x{:02X}", size);
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            let mut push32_quater_data: u64 = 0;
-
-            for j in 0..size {
-                pc += 1;
-                push32_quater_data += (code[pc] as u64) << ((8 - ((j + 1) % 8)) * 8) % 64;
-
-                if (j + 1) % 8 == 0 {
-                    // println!("first 0x{:02X}", push32_quater_data);
-                    arr[(4 - (j + 1) / 8) as usize] = push32_quater_data as u64;
-                    push32_quater_data = 0;
-                }
-            }
-
-            stack.insert(0, U256(arr));
-        }
-
-        // PUSH11
-        if opcode == 0x6a {
-            // @i see the hint and try to do something with it
-            let size = opcode - 0x60 + 0x01;
-            // println!("size 0x{:02X}", size);
-
-            let mut push_data: u64 = 0;
-
-            for j in 0..3 {
-                pc += 1;
-                // println!("number {}", (size - 2 - i - 1) * 8);
-                push_data += (code[pc] as u64) << ((2 - j) * 8);
-                // println!("first 0x{:02X}", push_data);
-            }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
 
-            arr[1] = push_data as u64;
-            push_data = 0;
-
-            for i in 0..size - 3 {
+            // Read all bytes and place them right-aligned (least significant bits)
+            for i in 0..size {
                 pc += 1;
-                // println!("number {}", (size - 2 - i - 1) * 8);
-                push_data += (code[pc] as u64) << ((size - 2 - i - 1 - 1) * 8);
-                // println!("first 0x{:02X}", push_data);
-            }
-            arr[0] = push_data as u64;
-            stack.insert(0, U256(arr));
-        }
-
-        // PUSH10
-        if opcode == 0x69 {
-            let size = opcode - 0x60 + 0x01;
-            // println!("size 0x{:02X}", size);
-
-            let mut push_data: u64 = 0;
-
-            for j in 0..2 {
-                pc += 1;
-                // println!("number {}", (size - 2 - i - 1) * 8);
-                push_data += (code[pc] as u64) << ((1 - j) * 8);
-                // println!("first 0x{:02X}", push_data);
+                let byte = code[pc] as u64;
+                let bit_position = (size - 1 - i) * 8;
+                let arr_index = (bit_position / 64) as usize;
+                let bit_shift = bit_position % 64;
+                arr[arr_index] |= byte << bit_shift;
             }
 
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[1] = push_data as u64;
-            push_data = 0;
-
-            for i in 0..size - 2 {
-                pc += 1;
-                // println!("number {}", (size - 2 - i - 1) * 8);
-                push_data += (code[pc] as u64) << ((size - 2 - i - 1) * 8);
-                // println!("first 0x{:02X}", push_data);
-            }
-            arr[0] = push_data as u64;
             stack.insert(0, U256(arr));
         }
 

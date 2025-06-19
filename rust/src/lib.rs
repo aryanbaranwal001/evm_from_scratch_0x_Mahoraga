@@ -16,7 +16,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     let mut jump_arr: Vec<u32> = Vec::new();
 
     // memory start
-    let mut memory_m = U256::zero();
+    let mut memory_m: Vec<U256> = Vec::new();
 
     // memory end
 
@@ -66,13 +66,15 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
             println!("offset {}", offset);
 
-            memory_m = data << ((U256::from(31) - offset) * 8);
+            memory_m.push(data << ((U256::from(31) - offset) * 8));
         }
 
         // MLOAD
+        // it doesn't remove it
         if opcode == 0x51 {
             let off_set = stack.remove(0);
-            stack.insert(0, memory_m << (off_set * 8));
+            let data = memory_m.remove(0);
+            stack.insert(0, data << (off_set * 8));
         }
 
         // MSTORE
@@ -80,7 +82,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let _first = stack.remove(0);
             let data = stack.remove(0);
 
-            memory_m = data;
+            memory_m.push(data);
         }
 
         // JUMPI

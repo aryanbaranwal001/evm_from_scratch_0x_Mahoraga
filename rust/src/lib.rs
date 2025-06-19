@@ -20,6 +20,34 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+        // SAR
+        if opcode == 0x1d {
+            let shift = stack.remove(0);
+            let value = stack.remove(0);
+
+            let value_negative = value.bit(255);
+
+            println!("value 0x{:02X}    ", value);
+            println!("U256: 0x{:02X}", U256::MAX);
+
+            let result = if value_negative == false {
+                if shift >= U256::from(256) { U256::zero() } else { value >> shift }
+            } else {
+                if shift >= U256::from(256) {
+                    U256::MAX
+                } else {
+                    let shifted = value >> shift;
+                    let mask = U256::MAX << (U256::from(256) - shift);
+                    mask | shifted
+                }
+            };
+
+            println!("resul 0x{:02X}    ", result);
+            println!("u25va 0x{:02X}    ", U256::MAX & (value >> shift));
+            println!("vashf 0x{:02X}    ", value >> shift);
+            println!("-----------------------");
+            stack.insert(0, result);
+        }
 
         // SHR
         if opcode == 0x1c {
@@ -30,7 +58,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
             stack.insert(0, result);
         }
-
 
         // SHL
         if opcode == 0x1b {

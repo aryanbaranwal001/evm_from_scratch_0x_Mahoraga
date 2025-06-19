@@ -15,7 +15,12 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
     let mut jump_arr: Vec<u32> = Vec::new();
 
-    // jump thing
+    // memory start
+    let mut memory_m = U256::zero();
+
+    // memory end
+
+    // jump thing start
     while jpc < code.len() {
         let opcodej = code[jpc];
 
@@ -31,10 +36,10 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         jpc += 1;
     }
 
-    // jump thing
     fn check_valid_jump_location(location: u32, jump_arr: &Vec<u32>) -> bool {
         jump_arr.contains(&location)
     }
+    // jump thing end
 
     // main code base
     while pc < code.len() {
@@ -53,6 +58,26 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
+
+        // MSTORE (tail)
+        if opcode == 0x51 {
+            let off_set = stack.remove(0);
+            stack.insert(0, memory_m << off_set);
+        }
+
+        // MLOAD
+        if opcode == 0x51 {
+            let off_set = stack.remove(0);
+            stack.insert(0, memory_m << off_set);
+        }
+
+        // MSTORE
+        if opcode == 0x52 {
+            let _first = stack.remove(0);
+            let data = stack.remove(0);
+
+            memory_m = data;
+        }
 
         // JUMPI
         if opcode == 0x57 {

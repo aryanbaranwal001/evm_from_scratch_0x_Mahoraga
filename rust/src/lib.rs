@@ -29,6 +29,25 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+        // GAS
+        if opcode == 0x5a {
+            stack.insert(0, U256::MAX);
+        }
+
+        // PC
+        if opcode == 0x58 {
+            // what if pc is big number ??
+            stack.insert(0, U256::from(pc));
+        }
+
+        // INVALID
+        if opcode == 0xfe {
+            return EvmResult {
+                stack: stack,
+                success: false,
+            };
+        }
+
         // SWAP ALL IN ONE
         if 0x90 <= opcode && opcode <= 0x9f {
             let index = opcode - 0x90;

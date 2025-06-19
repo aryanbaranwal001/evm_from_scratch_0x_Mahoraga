@@ -15,10 +15,30 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     while pc < code.len() {
         // check all the opcodes and update the pc accn
         // @i there is in built overflowing add, sub, mul, div, etc
+        // @i YOU MUST UNDERSTAND THAT PUSH9->PUSH32 CODE
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
+
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
+
+        // SWAP ALL IN ONE
+        if 0x90 <= opcode && opcode <= 0x9f {
+            let index = opcode - 0x90;
+
+            let first = stack[0].clone();
+            let second = stack[(index + 1) as usize].clone();
+
+            stack[0] = second;
+            stack[(index + 1) as usize] = first;
+        }
 
         // DUP ALL IN ONE
         if (opcode & 0xf0) == 0x80 {

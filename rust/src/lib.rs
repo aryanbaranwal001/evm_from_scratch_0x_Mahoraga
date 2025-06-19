@@ -20,6 +20,18 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+
+        // SHR
+        if opcode == 0x1c {
+            let shift = stack.remove(0);
+            let value = stack.remove(0);
+
+            let result = if shift >= U256::from(256) { U256::zero() } else { value >> shift };
+
+            stack.insert(0, result);
+        }
+
+
         // SHL
         if opcode == 0x1b {
             let shift = stack.remove(0);

@@ -18,11 +18,53 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
-
         // ----------------------------------------------------------------------//
 
+        // SLT
+        if opcode == 0x12 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let first_negative = first.bit(255);
+            let second_negative = second.bit(255);
+
+            let result = match (first_negative, second_negative) {
+                (true, false) => U256::one(),
+                (false, true) => U256::zero(),
+                _ => {
+                    // use unsigned comparison is possible !!!
+                    if first < second {
+                        U256::one()
+                    } else {
+                        U256::zero()
+                    }
+                }
+            };
+
+            stack.insert(0, result);
+        }
+
+        // SGT
+        if opcode == 0x13 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let first_negative = first.bit(255);
+            let second_negative = second.bit(255);
+
+            let result = match (first_negative, second_negative) {
+                (false, true) => U256::one(),
+                (true, false) => U256::zero(),
+                _ => {
+                    if first > second { U256::one() } else { U256::zero() }
+                }
+            };
+
+            stack.insert(0, result);
+        }
+
+        // LT
         if opcode == 0x10 {
-            // LT
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -31,8 +73,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, result);
         }
 
+        // GT
         if opcode == 0x11 {
-            // GT
             let first = stack.remove(0);
             let second = stack.remove(0);
 

@@ -19,6 +19,44 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
         // ----------------------------------------------------------------------//
 
+        if opcode == 0x07 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            if second == U256::zero() {
+                stack.insert(0, U256::zero());
+                return EvmResult {
+                    stack: stack,
+                    success: true,
+                };
+            }
+
+            let first_negative = first.bit(255);
+            let second_negative = second.bit(255);
+
+            let abs_first = if first_negative {
+                (!first).overflowing_add(U256::one()).0
+            } else {
+                first
+            };
+
+            let abs_second = if second_negative {
+                (!second).overflowing_add(U256::one()).0
+            } else {
+                second
+            };
+
+            let remainder = abs_first % abs_second;
+
+            let result = if first_negative {
+                (!remainder).overflowing_add(U256::one()).0
+            } else {
+                remainder
+            };
+
+            stack.insert(0, result);
+        }
+
         if opcode == 0x05 {
             let first = stack.remove(0);
             let second = stack.remove(0);
@@ -80,7 +118,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let mut num = base;
             for i in 0..exp - 1 {
                 num *= base;
-                println!("first 0x{:02X}", num);
             }
 
             // @i there is a flaw here

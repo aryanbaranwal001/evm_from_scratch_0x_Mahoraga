@@ -20,15 +20,29 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+        // BYTE
+
+        if opcode == 0x1a {
+            let i = stack.remove(0);
+            let value = stack.remove(0);
+
+            let result = if i >= U256::from(32) {
+                U256::zero()
+            } else {
+                let byte_value =
+                    (value >> (U256::from(8) * (U256::from(31) - i))) & U256::from(0xff);
+                byte_value
+            };
+
+            stack.insert(0, result);
+        }
+
         // SAR
         if opcode == 0x1d {
             let shift = stack.remove(0);
             let value = stack.remove(0);
 
             let value_negative = value.bit(255);
-
-            println!("value 0x{:02X}    ", value);
-            println!("U256: 0x{:02X}", U256::MAX);
 
             let result = if value_negative == false {
                 if shift >= U256::from(256) { U256::zero() } else { value >> shift }
@@ -42,10 +56,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
                 }
             };
 
-            println!("resul 0x{:02X}    ", result);
-            println!("u25va 0x{:02X}    ", U256::MAX & (value >> shift));
-            println!("vashf 0x{:02X}    ", value >> shift);
-            println!("-----------------------");
             stack.insert(0, result);
         }
 
@@ -592,6 +602,21 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             for i in 0..4 {
                 pc += 1;
                 push2_data += (code[pc] as u32) << ((4 - i - 1) * 8);
+            }
+
+            let mut arr: [u64; 4] = [0, 0, 0, 0];
+
+            arr[0] = push2_data as u64;
+
+            stack.insert(0, U256(arr));
+        }
+
+        // PUSH3
+        if opcode == 0x62 {
+            let mut push2_data: u32 = 0;
+            for i in 0..3 {
+                pc += 1;
+                push2_data += (code[pc] as u32) << ((3 - i - 1) * 8);
             }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];

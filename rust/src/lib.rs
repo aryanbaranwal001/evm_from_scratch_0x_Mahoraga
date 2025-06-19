@@ -582,79 +582,20 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
-        // PUSH6
-        if opcode == 0x65 {
-            // @q how exactly bytes, decimals, etc types getting converted
-            // and how do they flow, like code, as_ref() etc
-            // @i (improvement) implement the for loop
-            // @i at the end of every opcode, you can pc + (amount you used
-            // in that if block)
+        // PUSH1 --> PUSH8
+        if 0x60 <= opcode && opcode <= 0x67 {
+            let size = opcode - 0x60 + 0x01;
 
             let mut push2_data: u64 = 0;
-            for i in 0..6 {
+            for i in 0..size {
                 pc += 1;
-                push2_data += (code[pc] as u64) << ((6 - i - 1) * 8);
+                push2_data += (code[pc] as u64) << ((size - i - 1) * 8);
             }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
 
             arr[0] = push2_data as u64;
 
-            stack.push(U256(arr));
-        }
-
-        // PUSH4
-        if opcode == 0x63 {
-            let mut push2_data: u32 = 0;
-            for i in 0..4 {
-                pc += 1;
-                push2_data += (code[pc] as u32) << ((4 - i - 1) * 8);
-            }
-
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[0] = push2_data as u64;
-
-            stack.insert(0, U256(arr));
-        }
-
-        // PUSH3
-        if opcode == 0x62 {
-            let mut push2_data: u32 = 0;
-            for i in 0..3 {
-                pc += 1;
-                push2_data += (code[pc] as u32) << ((3 - i - 1) * 8);
-            }
-
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[0] = push2_data as u64;
-
-            stack.insert(0, U256(arr));
-        }
-
-        // PUSH1
-        if opcode == 0x60 {
-            pc += 1;
-            let push1_data = code[pc];
-
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[0] = push1_data as u64;
-            stack.insert(0, U256(arr));
-        }
-
-        // PUSH2
-        if opcode == 0x61 {
-            pc += 1;
-            let mut push2_data = (code[pc] as u16) << 8;
-            pc += 1;
-            let push2_data2 = code[pc];
-            push2_data += push2_data2 as u16;
-
-            let mut arr: [u64; 4] = [0, 0, 0, 0];
-
-            arr[0] = push2_data as u64;
             stack.insert(0, U256(arr));
         }
 
@@ -663,8 +604,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.push(U256([0, 0, 0, 0]));
         }
 
+        // STOP
         if opcode == 0x00 {
-            // STOP
             break;
         }
 

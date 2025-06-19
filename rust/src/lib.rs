@@ -9,9 +9,34 @@ pub struct EvmResult {
 pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     let mut stack: Vec<U256> = Vec::new();
     let mut pc = 0;
+    let mut jpc = 0;
 
     let code = _code.as_ref();
 
+    let mut jump_arr: Vec<u32> = Vec::new();
+
+    // jump thing
+    while jpc < code.len() {
+        let opcodej = code[jpc];
+
+        if opcodej == 0x5b {
+            jump_arr.push(jpc as u32);
+        }
+
+        if 0x60 <= opcodej && opcodej <= 0x7f {
+            let size = opcodej - 0x60 + 0x01;
+            jpc += size as usize;
+        }
+
+        jpc += 1;
+    }
+
+    // jump thing
+    fn check_valid_jump_location(location: u32, jump_arr: &Vec<u32>) -> bool {
+        jump_arr.contains(&location)
+    }
+
+    // main code base
     while pc < code.len() {
         // check all the opcodes and update the pc accn
         // @i there is in built overflowing add, sub, mul, div, etc
@@ -28,6 +53,28 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
+
+        // JUMP
+        if opcode == 0x56 {
+            let index = stack.remove(0).0[0];
+            pc = index as usize;
+
+            let mut valid_position = check_valid_jump_location(pc as u32, &jump_arr);
+
+            if code[pc] == 0x5b && valid_position == true {
+                pc += 1;
+                continue;
+            } else {
+                return EvmResult {
+                    stack: stack,
+                    success: false,
+                };
+            }
+        }
+
+        // if opcode == 0x5b {
+        //     continue;
+        // }
 
         // GAS
         if opcode == 0x5a {
@@ -346,9 +393,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256::from(num));
         }
 
+        // MULMOD or MULLMOD(wrapped)
         if opcode == 0x09 {
-            // MULMOD or MULLMOD(wrapped)
-
             let first = stack.remove(0);
             let second = stack.remove(0);
             let third = stack.remove(0);
@@ -359,8 +405,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, result_arr);
         }
 
+        // ADDMOD or ADDMOD(wrapped)
         if opcode == 0x08 {
-            // ADDMOD or ADDMOD(wrapped)
             let first = stack.remove(0);
             let second = stack.remove(0);
             let third = stack.remove(0);
@@ -384,9 +430,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, mod_value);
         }
 
+        // MOD
         if opcode == 0x06 {
-            // MOD
-
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -403,8 +448,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             }
         }
 
+        // DIV
         if opcode == 0x04 {
-            // DIV
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -419,8 +464,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             }
         }
 
+        // SUB or SUB (underflow)
         if opcode == 0x03 {
-            // SUB or SUB (underflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -475,8 +520,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(finalf_result_arr));
         }
 
+        // MUL or MUL (overflow)
         if opcode == 0x02 {
-            // MUL or MUL (overflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 
@@ -513,8 +558,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, result_num);
         }
 
+        // ADD or ADD (overflow)
         if opcode == 0x01 {
-            // ADD or ADD (overflow)
             let first = stack.remove(0);
             let second = stack.remove(0);
 

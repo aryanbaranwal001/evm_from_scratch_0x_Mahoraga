@@ -20,8 +20,15 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
-        // BYTE
+        // DUP ALL IN ONE
+        if (opcode & 0xf0) == 0x80 {
+            let index = opcode - 0x80;
+            let first = stack[index as usize].clone();
 
+            stack.insert(0, first);
+        }
+
+        // BYTE
         if opcode == 0x1a {
             let i = stack.remove(0);
             let value = stack.remove(0);

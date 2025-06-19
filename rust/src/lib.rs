@@ -54,6 +54,32 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+        // JUMPI
+        if opcode == 0x57 {
+            let index = stack.remove(0).0[0];
+            let bool_ean = stack.remove(0).bit(0);
+            let temp_pc = index as usize;
+
+            let mut valid_position = check_valid_jump_location(temp_pc as u32, &jump_arr);
+
+            if bool_ean == true {
+                if valid_position == true {
+                    pc = index as usize;
+                    pc += 1;
+                    continue;
+                } else {
+                    return EvmResult {
+                        stack: stack,
+                        success: false,
+                    };
+                }
+            } else {
+                pc += 1;
+                code[pc];
+                continue;
+            }
+        }
+
         // JUMP
         if opcode == 0x56 {
             let index = stack.remove(0).0[0];
@@ -71,10 +97,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
                 };
             }
         }
-
-        // if opcode == 0x5b {
-        //     continue;
-        // }
 
         // GAS
         if opcode == 0x5a {

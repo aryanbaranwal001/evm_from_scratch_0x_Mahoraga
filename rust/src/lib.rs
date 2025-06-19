@@ -20,6 +20,79 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
+        // SHL
+        // if opcode == 0x1b {
+        //     println!("-------------------");
+
+        //     let shift = stack.remove(0);
+        //     let value = stack.remove(0);            
+
+        //     println!("shift 0x{:02X}", shift);
+        //     println!("value 0x{:02X}", value);
+            
+        //     let result = if shift >= U256::from(256) {
+        //         U256::zero()
+        //     } else {
+        //         value << shift
+        //     };
+
+        //     println!("result 0x{:02X}", result);
+
+        //     stack.insert(0, result);
+        // }
+
+        // NOT
+        if opcode == 0x19 {
+            let first = stack.remove(0);
+            let result = !first;
+            stack.insert(0, result);
+        }
+
+        // AND
+        if opcode == 0x16 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+            let result = first & second;
+            stack.insert(0, result);
+        }
+
+        // OR
+        if opcode == 0x17 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+            let result = first | second;
+            stack.insert(0, result);
+        }
+
+        // XOR
+        if opcode == 0x18 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+            let result = first ^ second;
+            stack.insert(0, result);
+        }
+
+        // ISZERO
+        if opcode == 0x15 {
+            let first = stack.remove(0);
+
+            if first != U256::zero() {
+                stack.insert(0, U256::zero());
+            } else {
+                stack.insert(0, U256::one());
+            }
+        }
+
+        // EQ
+        if opcode == 0x14 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let result = if first == second { U256::one() } else { U256::zero() };
+
+            stack.insert(0, result);
+        }
+
         // SLT
         if opcode == 0x12 {
             let first = stack.remove(0);
@@ -476,7 +549,6 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             for i in 0..6 {
                 pc += 1;
                 push2_data += (code[pc] as u64) << ((6 - i - 1) * 8);
-                println!("first 0x{:02X}", push2_data);
             }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];

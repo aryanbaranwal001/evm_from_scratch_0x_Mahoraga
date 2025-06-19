@@ -1,5 +1,5 @@
 use primitive_types::U256;
-use hex::ToHex;
+// use hex::ToHex;
 
 pub struct EvmResult {
     pub stack: Vec<U256>,
@@ -18,6 +18,28 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
+
+        // ----------------------------------------------------------------------//
+
+        if opcode == 0x10 {
+            // LT
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let result = if first < second { U256::one() } else { U256::zero() };
+
+            stack.insert(0, result);
+        }
+
+        if opcode == 0x11 {
+            // GT
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let result = if first > second { U256::one() } else { U256::zero() };
+
+            stack.insert(0, result);
+        }
 
         if opcode == 0x07 {
             let first = stack.remove(0);
@@ -116,7 +138,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             // @i u are not using whole all of the numbers
 
             let mut num = base;
-            for i in 0..exp - 1 {
+            for _i in 0..exp - 1 {
                 num *= base;
             }
 
@@ -176,7 +198,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             if second == U256::zero() {
                 stack.insert(0, U256::zero());
             } else {
-                let mut div = first % second;
+                let div = first % second;
 
                 stack.insert(0, div);
             }
@@ -192,7 +214,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             if second == U256::zero() {
                 stack.insert(0, U256::zero());
             } else {
-                let mut div = first / second;
+                let div = first / second;
 
                 stack.insert(0, div);
             }
@@ -319,9 +341,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.remove(0);
         }
 
+        // PUSH32
         if opcode == 0x7f {
-            // PUSH32
-
             let size = opcode - 0x60 + 0x01;
             // println!("size 0x{:02X}", size);
             let mut arr: [u64; 4] = [0, 0, 0, 0];
@@ -342,8 +363,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
+        // PUSH11
         if opcode == 0x6a {
-            // PUSH11
             // @i see the hint and try to do something with it
             let size = opcode - 0x60 + 0x01;
             // println!("size 0x{:02X}", size);
@@ -372,8 +393,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
+        // PUSH10
         if opcode == 0x69 {
-            // PUSH10
             let size = opcode - 0x60 + 0x01;
             // println!("size 0x{:02X}", size);
 
@@ -401,27 +422,20 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
+        // PUSH6
         if opcode == 0x65 {
-            // PUSH2
-
             // @q how exactly bytes, decimals, etc types getting converted
             // and how do they flow, like code, as_ref() etc
             // @i (improvement) implement the for loop
             // @i at the end of every opcode, you can pc + (amount you used
             // in that if block)
 
-            let mut push2_data = (code[pc + 1] as u64) << 40;
-            let push2_data2 = (code[pc + 2] as u64) << 32;
-            let push2_data3 = (code[pc + 3] as u64) << 24;
-            let push2_data4 = (code[pc + 4] as u64) << 16;
-            let push2_data5 = (code[pc + 5] as u64) << 8;
-            let push2_data6 = code[pc + 6] as u64;
-
-            push2_data += push2_data2 as u64;
-            push2_data += push2_data3 as u64;
-            push2_data += push2_data4 as u64;
-            push2_data += push2_data5 as u64;
-            push2_data += push2_data6 as u64;
+            let mut push2_data: u64 = 0;
+            for i in 0..6 {
+                pc += 1;
+                push2_data += (code[pc] as u64) << ((6 - i - 1) * 8);
+                println!("first 0x{:02X}", push2_data);
+            }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
 
@@ -430,27 +444,24 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.push(U256(arr));
         }
 
+        // PUSH4
         if opcode == 0x63 {
-            // PUSH2
-
-            let mut push2_data = (code[pc + 1] as u32) << 24;
-            let push2_data2 = (code[pc + 2] as u32) << 16;
-            let push2_data3 = (code[pc + 3] as u32) << 8;
-            let push2_data4 = code[pc + 4] as u32;
-
-            push2_data += push2_data2 as u32;
-            push2_data += push2_data3 as u32;
-            push2_data += push2_data4 as u32;
+            let mut push2_data: u32 = 0;
+            for i in 0..4 {
+                pc += 1;
+                push2_data += (code[pc] as u32) << ((4 - i - 1) * 8);
+            }
 
             let mut arr: [u64; 4] = [0, 0, 0, 0];
 
             arr[0] = push2_data as u64;
 
             stack.insert(0, U256(arr));
+            pc += 4;
         }
 
+        // PUSH1
         if opcode == 0x60 {
-            // PUSH1
             pc += 1;
             let push1_data = code[pc];
 
@@ -460,8 +471,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
+        // PUSH2
         if opcode == 0x61 {
-            // PUSH2
             pc += 1;
             let mut push2_data = (code[pc] as u16) << 8;
             pc += 1;
@@ -474,8 +485,8 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             stack.insert(0, U256(arr));
         }
 
+        // PUSH0
         if opcode == 0x5f {
-            // PUSH0
             stack.push(U256([0, 0, 0, 0]));
         }
 

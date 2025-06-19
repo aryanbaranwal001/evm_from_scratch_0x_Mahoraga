@@ -59,16 +59,10 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
-        // MSTORE (tail)
-        if opcode == 0x51 {
-            let off_set = stack.remove(0);
-            stack.insert(0, memory_m << off_set);
-        }
-
         // MLOAD
         if opcode == 0x51 {
             let off_set = stack.remove(0);
-            stack.insert(0, memory_m << off_set);
+            stack.insert(0, memory_m << (off_set * 8) );
         }
 
         // MSTORE

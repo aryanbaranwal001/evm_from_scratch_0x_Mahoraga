@@ -14,9 +14,46 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
 
     while pc < code.len() {
         // check all the opcodes and update the pc accn
+        // @i there is in built overflowing add, sub, mul, div, etc
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
+
+        if opcode == 0x05 {
+            let first = stack.remove(0);
+            let second = stack.remove(0);
+
+            let result = if second == U256::zero() {
+                U256::zero()
+            } else {
+                let a_negative = first.bit(255);
+                let b_negative = second.bit(255);
+
+                let a_abs = if a_negative {
+                    (!first).overflowing_add(U256::one()).0
+                } else {
+                    first
+                };
+
+                let b_abs = if b_negative {
+                    (!second).overflowing_add(U256::one()).0
+                } else {
+                    second
+                };
+
+                let quotient = a_abs / b_abs;
+
+                let result_negative = a_negative ^ b_negative;
+
+                if result_negative {
+                    (!quotient).overflowing_add(U256::one()).0
+                } else {
+                    quotient
+                }
+            };
+
+            stack.insert(0, result);
+        }
 
         if opcode == 0x0b {
             // @i try to do this with whole u64; 4

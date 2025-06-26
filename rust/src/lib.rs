@@ -59,30 +59,76 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
 
-        // MSTORE8
+        // MLOAD - Load 32 bytes from memory
+        if opcode == 0x51 {
+            let offset = stack.remove(0);
+            let offset_pos = offset.as_usize();
+
+
+            // @n memory is accessed in 32 bytes form
+            // Memory must be big enough for 32 bytes starting at offset
+            let last_byte_pos = offset_pos + 32;
+
+            // EVM rounds memory size up to multiples of 32
+            let new_size = ((last_byte_pos + 31) / 32) * 32;
+
+            if memory_m.len() < new_size {
+                memory_m.resize(new_size, U256::zero());
+            }
+
+            // Read 32 bytes and combine them into one big number
+            let mut result = U256::zero();
+            for i in 0..32 {
+                let byte_value = memory_m[offset_pos + i];
+                result = (result << 8) | byte_value;
+            }
+
+            stack.insert(0, result);
+        }
+
+        // MSTORE - Store 32 bytes to memory
+        if opcode == 0x52 {
+            let offset = stack.remove(0);
+            let value = stack.remove(0);
+            let offset_pos = offset.as_usize();
+
+            // Memory must be big enough for 32 bytes starting at offset
+            let last_byte_pos = offset_pos + 32;
+
+            // EVM rounds memory size up to multiples of 32
+            let new_size = ((last_byte_pos + 31) / 32) * 32;
+
+            if memory_m.len() < new_size {
+                memory_m.resize(new_size, U256::zero());
+            }
+
+            // Break the big number into 32 separate bytes
+            for i in 0..32 {
+                let byte_value = (value >> (8 * (31 - i))) & U256::from(0xff);
+                memory_m[offset_pos + i] = byte_value;
+            }
+        }
+
+        // MSTORE8 - Store 1 byte to memory
         if opcode == 0x53 {
             let offset = stack.remove(0);
-            let data = stack.remove(0);
+            let value = stack.remove(0);
+            let offset_pos = offset.as_usize();
 
-            println!("offset {}", offset);
+            // Make sure memory is big enough for 1 byte
+            if memory_m.len() <= offset_pos {
+                memory_m.resize(offset_pos + 1, U256::zero());
+            }
 
-            memory_m.push(data << ((U256::from(31) - offset) * 8));
+            // Only store the last byte of the value
+            let byte_value = value & U256::from(0xff);
+            memory_m[offset_pos] = byte_value;
         }
 
-        // MLOAD
-        // it doesn't remove it
-        if opcode == 0x51 {
-            let off_set = stack.remove(0);
-            let data = memory_m.remove(0);
-            stack.insert(0, data << (off_set * 8));
-        }
-
-        // MSTORE
-        if opcode == 0x52 {
-            let _first = stack.remove(0);
-            let data = stack.remove(0);
-
-            memory_m.push(data);
+        // MSIZE - Get how many bytes of memory we have
+        if opcode == 0x59 {
+            let size = U256::from(memory_m.len());
+            stack.insert(0, size);
         }
 
         // JUMPI
@@ -91,7 +137,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let bool_ean = stack.remove(0).bit(0);
             let temp_pc = index as usize;
 
-            let mut valid_position = check_valid_jump_location(temp_pc as u32, &jump_arr);
+            let valid_position = check_valid_jump_location(temp_pc as u32, &jump_arr);
 
             if bool_ean == true {
                 if valid_position == true {
@@ -116,7 +162,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
             let index = stack.remove(0).0[0];
             pc = index as usize;
 
-            let mut valid_position = check_valid_jump_location(pc as u32, &jump_arr);
+            let valid_position = check_valid_jump_location(pc as u32, &jump_arr);
 
             if code[pc] == 0x5b && valid_position == true {
                 pc += 1;

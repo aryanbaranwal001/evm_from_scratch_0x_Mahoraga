@@ -16,7 +16,7 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
     let mut jump_arr: Vec<u32> = Vec::new();
 
     // memory start
-    let mut memory_m: Vec<U256> = Vec::new();
+    let mut memory_m: Vec<u8> = Vec::new();
 
     // memory end
 
@@ -50,86 +50,104 @@ pub fn evm(_code: impl AsRef<[u8]>) -> EvmResult {
         // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
         // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
         // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
-        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
-        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
-        // MUUUUUUUUUUSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTT
 
         let opcode = code[pc];
 
         // ----------------------------------------------------------------------//
         // ----------------------------------------------------------------------//
+        fn expand_memory_to_32_byte_chunks(bytes_needed: usize) -> usize {
+            ((bytes_needed + 31) / 32) * 32
+        }
 
-        // MLOAD - Load 32 bytes from memory
+        // MLOAD
         if opcode == 0x51 {
-            let offset = stack.remove(0);
-            let offset_pos = offset.as_usize();
+            let memory_address = stack.remove(0);
+            let address = memory_address.as_usize();
 
+            let bytes_needed = address + 32;
+            let memory_size_needed = expand_memory_to_32_byte_chunks(bytes_needed);
 
-            // @n memory is accessed in 32 bytes form
-            // Memory must be big enough for 32 bytes starting at offset
-            let last_byte_pos = offset_pos + 32;
-
-            // EVM rounds memory size up to multiples of 32
-            let new_size = ((last_byte_pos + 31) / 32) * 32;
-
-            if memory_m.len() < new_size {
-                memory_m.resize(new_size, U256::zero());
+            if memory_m.len() < memory_size_needed {
+                memory_m.resize(memory_size_needed, 0);
             }
 
-            // Read 32 bytes and combine them into one big number
-            let mut result = U256::zero();
+            let mut data = [0u8; 32];
+
             for i in 0..32 {
-                let byte_value = memory_m[offset_pos + i];
-                result = (result << 8) | byte_value;
+                let memory_position = address + i;
+                data[i] = memory_m[memory_position];
             }
 
-            stack.insert(0, result);
+            let number = U256::from_big_endian(&data);
+            stack.insert(0, number);
         }
 
-        // MSTORE - Store 32 bytes to memory
+        // MSTORE
         if opcode == 0x52 {
-            let offset = stack.remove(0);
-            let value = stack.remove(0);
-            let offset_pos = offset.as_usize();
+            let memory_address = stack.remove(0);
+            let value_to_store = stack.remove(0);
+            let address = memory_address.as_usize();
 
-            // Memory must be big enough for 32 bytes starting at offset
-            let last_byte_pos = offset_pos + 32;
+            let bytes_needed = address + 32;
+            let memory_size_needed = expand_memory_to_32_byte_chunks(bytes_needed);
 
-            // EVM rounds memory size up to multiples of 32
-            let new_size = ((last_byte_pos + 31) / 32) * 32;
-
-            if memory_m.len() < new_size {
-                memory_m.resize(new_size, U256::zero());
+            if memory_m.len() < memory_size_needed {
+                memory_m.resize(memory_size_needed, 0);
             }
 
-            // Break the big number into 32 separate bytes
+            let mut bytes = [0u8; 32];
+
+            // I need to understand this in depth
+            value_to_store.to_big_endian(&mut bytes);
+            
             for i in 0..32 {
-                let byte_value = (value >> (8 * (31 - i))) & U256::from(0xff);
-                memory_m[offset_pos + i] = byte_value;
+                memory_m[address + i] = bytes[i];
             }
         }
 
-        // MSTORE8 - Store 1 byte to memory
+        // MSTORE8
         if opcode == 0x53 {
-            let offset = stack.remove(0);
-            let value = stack.remove(0);
-            let offset_pos = offset.as_usize();
+            let memory_address = stack.remove(0);
+            let value_to_store = stack.remove(0);
+            let address = memory_address.as_usize();
 
-            // Make sure memory is big enough for 1 byte
-            if memory_m.len() <= offset_pos {
-                memory_m.resize(offset_pos + 1, U256::zero());
+            let bytes_needed = address + 1;
+            let memory_size_needed = expand_memory_to_32_byte_chunks(bytes_needed);
+
+            if memory_m.len() < memory_size_needed {
+                memory_m.resize(memory_size_needed, 0);
             }
 
-            // Only store the last byte of the value
-            let byte_value = value & U256::from(0xff);
-            memory_m[offset_pos] = byte_value;
+            let single_byte = (value_to_store.low_u64() & 0xff) as u8;
+
+            memory_m[address] = single_byte;
         }
 
-        // MSIZE - Get how many bytes of memory we have
+        // MSIZE
         if opcode == 0x59 {
-            let size = U256::from(memory_m.len());
-            stack.insert(0, size);
+
+            let current_size = memory_m.len();
+            let size_as_number = U256::from(current_size);
+
+            stack.insert(0, size_as_number);
         }
+
+        // ===============================================
+        // EXAMPLE WALKTHROUGH OF THE FAILING TEST:
+        // ===============================================
+        //
+        // Test: PUSH1 0x39, MLOAD, POP, MSIZE
+        //
+        // 1. PUSH1 0x39 → Stack: [57]
+        // 2. MLOAD → Need to read 32 bytes starting at address 57
+        //    → Bytes needed: 57 + 32 = 89
+        //    → Memory expansion: (89 + 31) / 32 * 32 = 96 bytes
+        //    → Memory is now 96 bytes long
+        //    → Stack: [0] (32 zero bytes as a number)
+        // 3. POP → Stack: []
+        // 4. MSIZE → Stack: [96]
+        //    → 96 in hex is 0x60 ✓
+        // ===============================================
 
         // JUMPI
         if opcode == 0x57 {
